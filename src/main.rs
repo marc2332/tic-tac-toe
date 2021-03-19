@@ -1,8 +1,7 @@
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
-fn print_table(table: [[&str; 3] ; 3], indicator: &str){
-	println!("\nTurn for '{}': ", indicator);
+fn print_table(table: [[&str; 3] ; 3]){
 	for (pos_r,r) in table.iter().enumerate() {
 
 		if pos_r == 0 {
@@ -65,57 +64,52 @@ struct FoundEntity {
 	player: &'static str
 }
 
-fn verify_table(table: [[&'static str; 3] ; 3]) -> Result<bool,String>{
+fn verify_table(table: [[&'static str; 3] ; 3]) -> Result<&'static str, bool>{
 	let mut found = Vec::new();
 	for (pos_r,r) in table.iter().enumerate() {
 		for (pos_c,c) in r.iter().enumerate() {
 			// need to implement diagonal combinations
-			if pos_c > 0 && c != &" " {
-				if c == &r[pos_c-1] {
-					found.push(FoundEntity { 
-						pos_c: pos_c-1,
-						pos_r: pos_r,
-						player: c
-					});
-				}
-			}
-			if pos_c < 2 && c != &" " {
-				if c == &r[pos_c+1] {
-					found.push(FoundEntity { 
-						pos_c: pos_c+1,
-						pos_r: pos_r,
-						player: c
-					});
-				}
-			}
-			if pos_r > 0 && c != &" " {
-				if c == &table[pos_r-1][pos_c] {
-					found.push(FoundEntity { 
-						pos_c: pos_c,
-						pos_r: pos_r-1,
-						player: c
-					});
-				}
-			}
-			if pos_r < 2 && c != &" " {
-				if c == &table[pos_r+1][pos_c] {
-					found.push(FoundEntity { 
-						pos_c: pos_c,
-						pos_r: pos_r+1,
-						player: c
-					});
-				}
-			}
+			found.push(FoundEntity { 
+				pos_c: pos_c,
+				pos_r: pos_r,
+				player: c
+			});
 		} 
 	}
-	println!("found:");
-	// print found possible combinations
-	for f in found {
-		println!("{}{}{}",f.pos_r,f.pos_c, f.player);
-	}
-	// wip
-	Ok(true)
+	
+	verify_results(found)
 }
+
+fn verify_results(found: Vec<FoundEntity>) -> Result<&'static str, bool> {
+	// print found possible combinations
+	let mut c_player = "X";
+	let mut last_r = 0;
+	let mut last_c = 0;
+	let mut re = 0;
+	let mut ret = Err(false);
+	for f in found {
+		if f.player == c_player {
+			//println!("{}{}{}", f.pos_r, f.pos_c,f.player);
+			if last_r == f.pos_r || last_r+1 == f.pos_r  || last_r-1 == f.pos_r{
+				re += 1;
+			} else if last_c == f.pos_c || last_c+1 == f.pos_c  || last_c-1 == f.pos_c{
+				re += 1;
+			} else {
+				re = 0;
+			}
+			last_r = f.pos_r;
+			last_c = f.pos_c;
+			if re >= 3 {
+				ret = Ok(c_player);
+			}else {
+				ret =  Err(false);
+			}
+		}
+	}
+	
+	ret
+}
+
 
 fn main() {
 	
@@ -124,8 +118,8 @@ fn main() {
 	let mut table = [[" "; 3] ; 3];
 		
 	loop {
-		verify_table(table).unwrap();
-		print_table(table, current_player_indicator);
+		println!("\nTurn for '{}': ", current_player_indicator);
+		print_table(table);
 		let row_input = get_input("Row ? ");
 		let col_input = get_input("Column ? ");
 		let row: usize;
@@ -149,6 +143,14 @@ fn main() {
 			current_player = 0;
 			current_player_indicator = "X";
 		}
-
+		
+		match verify_table(table) {
+			Ok(v) => {
+				println!("\n Player {} has won the game!", v);
+				print_table(table);
+			},
+			Err(e) => {},
+		}
+		
 	}
 }
